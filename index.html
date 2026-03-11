@@ -14,7 +14,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ffd3a9 0%, #c4bbad 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -33,7 +33,7 @@
             margin-bottom: 30px;
             text-align: center;
             font-size: 2.5em;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background:  #ca8300 100%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -81,7 +81,7 @@
         }
 
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #ffb157 100%);
             color: white;
             border: none;
             padding: 12px 30px;
@@ -138,7 +138,7 @@
         }
 
         .report-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #ffab5c 100%);
             color: white;
             padding: 20px;
             border-radius: 10px 10px 0 0;
@@ -188,7 +188,7 @@
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #ffc380 100%);
             color: white;
             padding: 20px;
             border-radius: 10px;
@@ -257,11 +257,7 @@
             display: none;
         }
 
-        .info-text {
-            color: #666;
-            font-size: 14px;
-            margin-top: 10px;
-        }
+       
 
         .chart-type-selector {
             display: flex;
@@ -362,9 +358,7 @@
                     </select>
                 </div>
             </div>
-            <div class="info-text">
-                * Nhập tháng, năm và Authorization code để tìm kiếm báo cáo KPI
-            </div>
+            
         </div>
 
         <div class="loading" id="loading">
@@ -397,7 +391,39 @@
                 </div>
             </div>
 
-            <!-- Data Table -->
+            <!-- Top Completion Chart - Full Width -->
+            <div class="chart-card" style="margin-top: 20px;">
+                <h3>🏆 20 Nhân viên hoàn thành cao nhất</h3>
+                <div class="chart-wrapper">
+                    <canvas id="topCompletionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bottom Completion Chart - Full Width -->
+            <div class="chart-card" style="margin-top: 20px;">
+                <h3>⚠️ 20 Nhân viên hoàn thành thấp nhất</h3>
+                <div class="chart-wrapper">
+                    <canvas id="bottomCompletionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Area Completion Charts - Side by Side -->
+            <div class="charts-container" style="margin-top: 20px;">
+                <div class="chart-card">
+                    <h3>🏆 5 Khu vực hoàn thành cao nhất</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="topAreaChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>⚠️ 5 Khu vực hoàn thành thấp nhất</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="bottomAreaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <div class="table-container">
                 <table id="kpiTable">
                     <thead>
@@ -414,8 +440,12 @@
     <script>
         let currentData = null;
         let kpiChart = null;
+        let topCompletionChart = null;
+        let bottomCompletionChart = null;
+        let topAreaChart = null;
+        let bottomAreaChart = null;
         let currentChartType = 'bar';
-        let allData = null; // Store original unfiltered data
+        let allData = null; 
 
         async function searchKPI() {
             const month = document.getElementById('month').value;
@@ -457,9 +487,8 @@
                 const data = await response.json();
                 console.log('Dữ liệu nhận được:', data);
                 
-                // Lấy dữ liệu từ trường result
                 currentData = data.result || [];
-                allData = JSON.parse(JSON.stringify(currentData)); // Deep copy for filtering
+                allData = JSON.parse(JSON.stringify(currentData)); 
                 
                 document.getElementById('reportTitle').textContent = 
                     `Báo cáo KPI tháng ${month}/${year}`;
@@ -467,7 +496,6 @@
                 displayDataInfo(currentData);
                 displayData(currentData);
                 
-                // Populate area filter dropdown
                 populateAreaFilter(allData);
                 
                 setTimeout(() => {
@@ -494,11 +522,9 @@
             
             if (!data || data.length === 0) return;
             
-            // Get unique areas
             const uniqueAreas = [...new Set(data.map(item => item.ma_kv).filter(Boolean))];
             uniqueAreas.sort();
             
-            // Populate dropdown
             uniqueAreas.forEach(area => {
                 const option = document.createElement('option');
                 option.value = area;
@@ -512,19 +538,21 @@
             
             if (!allData || allData.length === 0) return;
             
-            // Filter data based on selected area
             if (selectedArea === '') {
-                currentData = JSON.parse(JSON.stringify(allData)); // Show all
+                currentData = JSON.parse(JSON.stringify(allData)); 
             } else {
                 currentData = allData.filter(item => item.ma_kv === selectedArea);
             }
             
-            // Update table and chart
             displayData(currentData);
             displaySummaryStats(currentData);
             createCharts(currentData);
             
-            // Update data info
+            createTopCompletionChart(allData);
+            createBottomCompletionChart(allData);
+            createTopAreaChart(allData);
+            createBottomAreaChart(allData);
+            
             if (selectedArea === '') {
                 displayDataInfo(currentData);
             } else {
@@ -555,7 +583,6 @@
                 return;
             }
 
-            // Định nghĩa các cột hiển thị
             const headers = [
                 { key: 'ma_nv', label: 'Mã NV' },
                 { key: 'ma_kv', label: 'Khu vực' },
@@ -567,14 +594,12 @@
                 { key: 'sp_trong_tam_tl', label: 'SPTT %' }
             ];
 
-            // Tạo header
             headers.forEach(header => {
                 const th = document.createElement('th');
                 th.textContent = header.label;
                 tableHeader.appendChild(th);
             });
 
-            // Tạo dòng dữ liệu
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 
@@ -582,7 +607,6 @@
                     const td = document.createElement('td');
                     let value = '';
                     
-                    // Xử lý theo từng loại dữ liệu
                     if (header.key === 'ma_nv') {
                         value = item.ma_nv || '-';
                     } else if (header.key === 'ma_kv') {
@@ -611,7 +635,6 @@
                     
                     td.textContent = value || '-';
                     
-                    // Thêm class cho cột %
                     if (header.key.includes('_tl')) {
                         const numValue = parseFloat(value);
                         if (!isNaN(numValue)) {
@@ -638,17 +661,31 @@
                 kpiChart.destroy();
                 kpiChart = null;
             }
+            if (topCompletionChart) {
+                topCompletionChart.destroy();
+                topCompletionChart = null;
+            }
+            if (bottomCompletionChart) {
+                bottomCompletionChart.destroy();
+                bottomCompletionChart = null;
+            }
+            if (topAreaChart) {
+                topAreaChart.destroy();
+                topAreaChart = null;
+            }
+            if (bottomAreaChart) {
+                bottomAreaChart.destroy();
+                bottomAreaChart = null;
+            }
 
             if (!data || data.length === 0) return;
 
-            // Lấy top 10 nhân viên có doanh số cao nhất
             const topData = [...data]
                 .sort((a, b) => (b.doanh_so?.th || 0) - (a.doanh_so?.th || 0))
                 .slice(0, 10);
 
             const labels = topData.map(item => item.ma_nv || 'N/A');
             
-            // Dữ liệu doanh số
             const doanhSoKH = topData.map(item => item.doanh_so?.kh || 0);
             const doanhSoTH = topData.map(item => item.doanh_so?.th || 0);
             const doanhSoTL = topData.map(item => item.doanh_so?.tl || 0);
@@ -659,7 +696,7 @@
                 let datasets = [];
                 
                 if (currentChartType === 'pie') {
-                    // Pie chart chỉ hiển thị doanh số thực hiện
+                    
                     datasets = [{
                         label: 'Doanh số thực hiện',
                         data: doanhSoTH,
@@ -668,7 +705,7 @@
                         borderWidth: 2
                     }];
                 } else {
-                    // Bar/Line chart hiển thị cả kế hoạch và thực hiện
+                    
                     datasets = [
                         {
                             label: 'Doanh số kế hoạch',
@@ -737,7 +774,325 @@
                 });
 
             } catch (error) {
-                console.error('Lỗi vẽ biểu đồ:', error);
+                console.error('Lỗi vẽ biểu đồ doanh số:', error);
+            }
+
+            createTopCompletionChart(data);
+            
+            createBottomCompletionChart(data);
+            
+            createTopAreaChart(data);
+            
+            createBottomAreaChart(data);
+        }
+
+        function createTopCompletionChart(data) {
+            if (!data || data.length === 0) return;
+
+            const topData = [...data]
+                .filter(item => (item.doanh_so?.kh || 0) > 0)
+                .sort((a, b) => (b.doanh_so?.tl || 0) - (a.doanh_so?.tl || 0))
+                .slice(0, 20);
+
+            const labels = topData.map(item => item.ma_nv || 'N/A');
+            const completionRates = topData.map(item => item.doanh_so?.tl || 0);
+
+            try {
+                const ctx = document.getElementById('topCompletionChart').getContext('2d');
+                
+                topCompletionChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Tỷ lệ hoàn thành (%)',
+                            data: completionRates,
+                            backgroundColor: completionRates.map(rate => {
+                                if (rate >= 100) return 'rgba(76, 175, 80, 0.7)'; 
+                                if (rate >= 80) return 'rgba(33, 150, 243, 0.7)'; 
+                                if (rate >= 50) return 'rgba(255, 193, 7, 0.7)'; 
+                                return 'rgba(244, 67, 54, 0.7)'; 
+                            }),
+                            borderColor: completionRates.map(rate => {
+                                if (rate >= 100) return 'rgba(76, 175, 80, 1)';
+                                if (rate >= 80) return 'rgba(33, 150, 243, 1)';
+                                if (rate >= 50) return 'rgba(255, 193, 7, 1)';
+                                return 'rgba(244, 67, 54, 1)';
+                            }),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { 
+                                position: 'top',
+                                labels: { font: { size: 12 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.raw.toFixed(1) + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Lỗi vẽ biểu đồ top completion:', error);
+            }
+        }
+
+        function createBottomCompletionChart(data) {
+            if (!data || data.length === 0) return;
+
+            const bottomData = [...data]
+                .filter(item => (item.doanh_so?.kh || 0) > 0)
+                .sort((a, b) => (a.doanh_so?.tl || 0) - (b.doanh_so?.tl || 0))
+                .slice(0, 20);
+
+            const labels = bottomData.map(item => item.ma_nv || 'N/A');
+            const completionRates = bottomData.map(item => item.doanh_so?.tl || 0);
+
+            try {
+                const ctx = document.getElementById('bottomCompletionChart').getContext('2d');
+                
+                bottomCompletionChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Tỷ lệ hoàn thành (%)',
+                            data: completionRates,
+                            backgroundColor: completionRates.map(rate => {
+                                if (rate >= 100) return 'rgba(76, 175, 80, 0.7)'; 
+                                if (rate >= 80) return 'rgba(33, 150, 243, 0.7)'; 
+                                if (rate >= 50) return 'rgba(255, 193, 7, 0.7)';
+                                return 'rgba(244, 67, 54, 0.7)';  
+                            }),
+                            borderColor: completionRates.map(rate => {
+                                if (rate >= 100) return 'rgba(76, 175, 80, 1)';
+                                if (rate >= 80) return 'rgba(33, 150, 243, 1)';
+                                if (rate >= 50) return 'rgba(255, 193, 7, 1)';
+                                return 'rgba(244, 67, 54, 1)';
+                            }),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { 
+                                position: 'top',
+                                labels: { font: { size: 12 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.raw.toFixed(1) + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Lỗi vẽ biểu đồ bottom completion:', error);
+            }
+        }
+
+        function createTopAreaChart(data) {
+            if (!data || data.length === 0) return;
+
+            const areaMap = {};
+            data.filter(item => (item.doanh_so?.kh || 0) > 0).forEach(item => {
+                const area = item.ma_kv || 'N/A';
+                if (!areaMap[area]) {
+                    areaMap[area] = { sum: 0, count: 0 };
+                }
+                areaMap[area].sum += item.doanh_so?.tl || 0;
+                areaMap[area].count += 1;
+            });
+
+            const areaData = Object.entries(areaMap)
+                .map(([area, values]) => ({
+                    area: area,
+                    avgTL: values.count > 0 ? values.sum / values.count : 0
+                }))
+                .sort((a, b) => b.avgTL - a.avgTL)
+                .slice(0, 5);
+
+            if (areaData.length === 0) return;
+
+            const labels = areaData.map(item => item.area);
+            const completionRates = areaData.map(item => item.avgTL);
+
+            try {
+                const ctx = document.getElementById('topAreaChart').getContext('2d');
+                
+                topAreaChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Tỷ lệ hoàn thành trung bình (%)',
+                            data: completionRates,
+                            backgroundColor: completionRates.map(rate => {
+                                if (rate >= 100) return 'rgba(76, 175, 80, 0.7)'; 
+                                if (rate >= 80) return 'rgba(33, 150, 243, 0.7)'; 
+                                if (rate >= 50) return 'rgba(255, 193, 7, 0.7)'; 
+                                return 'rgba(244, 67, 54, 0.7)'; 
+                            }),
+                            borderColor: completionRates.map(rate => {
+                                if (rate >= 100) return 'rgba(76, 175, 80, 1)';
+                                if (rate >= 80) return 'rgba(33, 150, 243, 1)';
+                                if (rate >= 50) return 'rgba(255, 193, 7, 1)';
+                                return 'rgba(244, 67, 54, 1)';
+                            }),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { 
+                                position: 'top',
+                                labels: { font: { size: 12 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.raw.toFixed(1) + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Lỗi vẽ biểu đồ top area:', error);
+            }
+        }
+
+        function createBottomAreaChart(data) {
+            if (!data || data.length === 0) return;
+
+            const areaMap = {};
+            data.filter(item => (item.doanh_so?.kh || 0) > 0).forEach(item => {
+                const area = item.ma_kv || 'N/A';
+                if (!areaMap[area]) {
+                    areaMap[area] = { sum: 0, count: 0 };
+                }
+                areaMap[area].sum += item.doanh_so?.tl || 0;
+                areaMap[area].count += 1;
+            });
+
+            const areaData = Object.entries(areaMap)
+                .map(([area, values]) => ({
+                    area: area,
+                    avgTL: values.count > 0 ? values.sum / values.count : 0
+                }))
+                .sort((a, b) => a.avgTL - b.avgTL)
+                .slice(0, 5);
+
+            if (areaData.length === 0) return;
+
+            const labels = areaData.map(item => item.area);
+            const completionRates = areaData.map(item => item.avgTL);
+
+            try {
+                const ctx = document.getElementById('bottomAreaChart').getContext('2d');
+                
+                bottomAreaChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Tỷ lệ hoàn thành trung bình (%)',
+                            data: completionRates,
+                            backgroundColor: completionRates.map(rate => {
+                                if (rate >= 100) return 'rgba(76, 175, 80, 0.7)'; 
+                                if (rate >= 80) return 'rgba(33, 150, 243, 0.7)'; 
+                                if (rate >= 50) return 'rgba(255, 193, 7, 0.7)'; 
+                                return 'rgba(244, 67, 54, 0.7)'; 
+                            }),
+                            borderColor: completionRates.map(rate => {
+                                if (rate >= 100) return 'rgba(76, 175, 80, 1)';
+                                if (rate >= 80) return 'rgba(33, 150, 243, 1)';
+                                if (rate >= 50) return 'rgba(255, 193, 7, 1)';
+                                return 'rgba(244, 67, 54, 1)';
+                            }),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { 
+                                position: 'top',
+                                labels: { font: { size: 12 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.raw.toFixed(1) + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Lỗi vẽ biểu đồ bottom area:', error);
             }
         }
 
@@ -747,14 +1102,11 @@
 
             if (!data || data.length === 0) return;
 
-            // Tính tổng doanh số
             const tongDoanhSoKH = data.reduce((sum, item) => sum + (item.doanh_so?.kh || 0), 0);
             const tongDoanhSoTH = data.reduce((sum, item) => sum + (item.doanh_so?.th || 0), 0);
             
-            // Tính tỷ lệ hoàn thành trung bình
             const tlTrungBinh = data.reduce((sum, item) => sum + (item.doanh_so?.tl || 0), 0) / data.length;
             
-            // Tìm nhân viên có doanh số cao nhất
             const nvCaoNhat = data.reduce((max, item) => 
                 (item.doanh_so?.th || 0) > (max.doanh_so?.th || 0) ? item : max, data[0]);
 
@@ -806,14 +1158,14 @@
 
         function getChartColor(index, alpha = 1) {
             const colors = [
-                `rgba(102, 126, 234, ${alpha})`, // Tím
-                `rgba(76, 175, 80, ${alpha})`,   // Xanh lá
-                `rgba(255, 152, 0, ${alpha})`,   // Cam
-                `rgba(244, 67, 54, ${alpha})`,   // Đỏ
-                `rgba(33, 150, 243, ${alpha})`,  // Xanh dương
-                `rgba(156, 39, 176, ${alpha})`,  // Tím đậm
-                `rgba(255, 193, 7, ${alpha})`,   // Vàng
-                `rgba(0, 150, 136, ${alpha})`    // Xanh ngọc
+                `rgba(102, 126, 234, ${alpha})`,
+                `rgba(76, 175, 80, ${alpha})`,   
+                `rgba(255, 152, 0, ${alpha})`,  
+                `rgba(244, 67, 54, ${alpha})`,   
+                `rgba(33, 150, 243, ${alpha})`,  
+                `rgba(156, 39, 176, ${alpha})`,  
+                `rgba(255, 193, 7, ${alpha})`,   
+                `rgba(0, 150, 136, ${alpha})`   
             ];
             return colors[index % colors.length];
         }
@@ -829,13 +1181,11 @@
             errorMessage.style.display = 'block';
         }
 
-        // Load dữ liệu mẫu để test
         document.addEventListener('DOMContentLoaded', function() {
             const today = new Date();
             document.getElementById('month').value = today.getMonth() + 1;
             document.getElementById('year').value = today.getFullYear();
             
-            // Dữ liệu mẫu từ file bạn cung cấp
             setTimeout(() => {
                 const sampleData = [
                     {
@@ -858,7 +1208,7 @@
                     }
                 ];
                 currentData = sampleData;
-                allData = JSON.parse(JSON.stringify(sampleData)); // Deep copy
+                allData = JSON.parse(JSON.stringify(sampleData));  
                 displayDataInfo(sampleData);
                 displayData(sampleData);
                 populateAreaFilter(sampleData);
