@@ -9,7 +9,7 @@ body {
 }
 
 .container {
-    min-width: 530px;
+    min-width: 400px;
     background: white;
     border-radius: 15px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.1);
