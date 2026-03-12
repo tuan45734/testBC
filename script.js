@@ -390,12 +390,12 @@ function createTopCompletionChart(data) {
                                 const item = topData[context.dataIndex];
                                 const { ten, maDonVi, groupPath } = getEmployeeDisplayInfo(item.ma_nv);
                                 
-                                let tooltipText = `${context.dataset.label}: ${context.raw.toFixed(1)}%`;
+                                let tooltipText = `${context.raw.toFixed(1)}%`;
                                
                                 
                                 if (item.doanh_so) {
-                                    tooltipText += `\n📊 DS KH: ${formatNumber(item.doanh_so.kh || 0)}`;
-                                    tooltipText += `\n💰 DS TH: ${formatNumber(item.doanh_so.th || 0)}`;
+                                    tooltipText += `\nDS KH: ${formatNumber(item.doanh_so.kh || 0)}`;
+                                    tooltipText += `\nDS TH: ${formatNumber(item.doanh_so.th || 0)}`;
                                 }
                                 
                                 return tooltipText;
@@ -506,11 +506,11 @@ function createBottomCompletionChart(data) {
                                 const item = bottomData[context.dataIndex];
                                 const { ten, maDonVi, groupPath } = getEmployeeDisplayInfo(item.ma_nv);
                                 
-                                let tooltipText = `${context.dataset.label}: ${context.raw.toFixed(1)}%`;
+                                let tooltipText = `${context.raw.toFixed(1)}%`;
                                
                                 if (item.doanh_so) {
-                                    tooltipText += `\n📊 DS KH: ${formatNumber(item.doanh_so.kh || 0)}`;
-                                    tooltipText += `\n💰 DS TH: ${formatNumber(item.doanh_so.th || 0)}`;
+                                    tooltipText += `\n DS KH: ${formatNumber(item.doanh_so.kh || 0)}`;
+                                    tooltipText += `\n DS TH: ${formatNumber(item.doanh_so.th || 0)}`;
                                 }
                                 
                                 return tooltipText;
