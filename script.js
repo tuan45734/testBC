@@ -488,10 +488,10 @@ function createTopCompletionChart(data, kv = 'all') {
         const titleElement = chartCard.querySelector('h3');
         if (titleElement) {
             if (kv === 'all') {
-                titleElement.innerHTML = '🏆 20 Nhân viên doanh số cao nhất (Tất cả KV)';
+                titleElement.innerHTML = '🏆 15 Nhân viên doanh số cao nhất (Tất cả KV)';
             } else {
                 const kvName = getGroupName(kv) || kv;
-                titleElement.innerHTML = `🏆 20 Nhân viên doanh số cao nhất - ${kvName}`;
+                titleElement.innerHTML = `🏆 15 Nhân viên doanh số cao nhất - ${kvName}`;
             }
         }
     }
@@ -611,10 +611,10 @@ function createBottomCompletionChart(data, kv = 'all') {
         const titleElement = chartCard.querySelector('h3');
         if (titleElement) {
             if (kv === 'all') {
-                titleElement.innerHTML = '⚠️ 30 Nhân viên doanh số thấp nhất (Tất cả KV)';
+                titleElement.innerHTML = '⚠️ 15 Nhân viên doanh số thấp nhất (Tất cả KV)';
             } else {
                 const kvName = getGroupName(kv) || kv;
-                titleElement.innerHTML = `⚠️ 30 Nhân viên doanh số thấp nhất - ${kvName}`;
+                titleElement.innerHTML = `⚠️ 15 Nhân viên doanh số thấp nhất - ${kvName}`;
             }
         }
     }
@@ -1139,6 +1139,10 @@ function displaySummaryStats(data) {
     
     const nvCaoNhat = data.reduce((max, item) => (item.doanh_so?.th || 0) > (max.doanh_so?.th || 0) ? item : max, data[0]);
     
+    // Lấy thông tin NPP của nhân viên cao nhất
+    const nvCaoNhatInfo = getEmployeeDisplayInfo(nvCaoNhat.ma_nv);
+    const nvCaoNhatNPP = nvCaoNhatInfo.maDonVi ? getGroupName(nvCaoNhatInfo.maDonVi) : 'N/A';
+    
     const areaStats = {};
     data.forEach(item => {
         const area = item.ma_kv || 'N/A';
@@ -1187,7 +1191,13 @@ function displaySummaryStats(data) {
         { label: '📊 Tổng DS KH', value: tongDoanhSoKH },
         { label: '💰 Tổng DS TH', value: tongDoanhSoTH },
         { label: '📈 Tỷ lệ TB', value: tlTrungBinh, unit: '%' },
-        { label: '🏆 NV cao nhất', value: getEmployeeName(nvCaoNhat.ma_nv), subValue: formatNumber(nvCaoNhat.doanh_so?.th || 0), subLabel: 'Doanh số' },
+        { 
+            label: '🏆 NV cao nhất', 
+            value: getEmployeeName(nvCaoNhat.ma_nv), 
+            subValue: formatNumber(nvCaoNhat.doanh_so?.th || 0), 
+            subLabel: 'Doanh số',
+            nppInfo: `- ${nvCaoNhatNPP}` // Thêm thông tin NPP
+        },
         { label: '🏢 NPP cao nhất', value: getGroupName(nppCaoNhat ? nppCaoNhat.ten : 'N/A'), subValue: nppCaoNhat ? formatNumber(nppCaoNhat.doanhSoTH) : '0', subLabel: 'Doanh số', tlValue: nppCaoNhat ? nppCaoNhat.tl.toFixed(1) + '%' : '0%' },
         { label: '📍 KV doanh thu cao nhất', value: kvCaoNhat ? getGroupName(kvCaoNhat.ma) : 'N/A', subValue: kvCaoNhat ? formatNumber(kvCaoNhat.doanhThu) : '0', subLabel: 'Doanh số TH', tlValue: kvCaoNhat ? `Tỷ lệ: ${kvCaoNhat.tl.toFixed(1)}%` : '' }
     ];
@@ -1199,14 +1209,27 @@ function displaySummaryStats(data) {
         if (stat.unit === '%') {
             statCard.innerHTML = `<div class="stat-label">${stat.label}</div><div class="stat-value">${stat.value.toFixed(1)}%</div>`;
         } else if (stat.subValue) {
-            statCard.innerHTML = `
-                <div class="stat-label">${stat.label}</div>
-                <div class="stat-value">${stat.value}</div>
-                <div style="font-size: 12px; opacity: 0.9; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                    <span>${stat.subLabel}: ${stat.subValue}</span>
-                    ${stat.tlValue ? `<span>${stat.tlValue}</span>` : ''}
-                </div>
-            `;
+            // Hiển thị thêm NPP cho NV cao nhất
+            if (stat.nppInfo) {
+                statCard.innerHTML = `
+                    <div class="stat-label">${stat.label}</div>
+                    <div class="stat-value">${stat.value}</div>
+                    <div style="font-size: 12px; opacity: 0.9; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                        <span>${stat.subLabel}: ${stat.subValue}</span>
+                        <span>${stat.nppInfo}</span>
+                        ${stat.tlValue ? `<span>${stat.tlValue}</span>` : ''}
+                    </div>
+                `;
+            } else {
+                statCard.innerHTML = `
+                    <div class="stat-label">${stat.label}</div>
+                    <div class="stat-value">${stat.value}</div>
+                    <div style="font-size: 12px; opacity: 0.9; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                        <span>${stat.subLabel}: ${stat.subValue}</span>
+                        ${stat.tlValue ? `<span>${stat.tlValue}</span>` : ''}
+                    </div>
+                `;
+            }
         } else {
             statCard.innerHTML = `<div class="stat-label">${stat.label}</div><div class="stat-value">${formatNumber(stat.value)}</div>`;
         }
