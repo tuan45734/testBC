@@ -522,7 +522,7 @@ function createTopCompletionChart(data, kv = 'all') {
     
     const labels = topData.map(item => {
         const { ten, maDonVi, groupPath } = getEmployeeDisplayInfo(item.ma_nv);
-        if (groupPath && maDonVi) return `${ten} (${maDonVi})\n${groupPath}`;
+        if (groupPath && maDonVi) return `${ten}-${maDonVi}`;
         if (maDonVi) return `${ten} (${maDonVi})`;
         if (groupPath) return `${ten}\n(${groupPath})`;
         return ten;
@@ -662,7 +662,7 @@ function createBottomCompletionChart(data, kv = 'all') {
     
     const labels = bottomData.map(item => {
         const { ten, maDonVi, groupPath } = getEmployeeDisplayInfo(item.ma_nv);
-        if (groupPath && maDonVi) return `${ten} (${maDonVi})\n${groupPath}`;
+        if (groupPath && maDonVi) return `${ten}-${maDonVi}`;
         if (maDonVi) return `${ten} (${maDonVi})`;
         if (groupPath) return `${ten}\n(${groupPath})`;
         return ten;
@@ -786,9 +786,9 @@ function createAreaRevenueChart(data) {
     
     const sortedKVs = Object.entries(kvRevenue).sort((a, b) => b[1] - a[1]);
     let processedData = sortedKVs;
-    if (sortedKVs.length > 10) {
-        const topKVs = sortedKVs.slice(0, 9);
-        const otherRevenue = sortedKVs.slice(9).reduce((sum, [, revenue]) => sum + revenue, 0);
+    if (sortedKVs.length > 8) { // Giảm xuống 8 để dễ nhìn hơn trên mobile
+        const topKVs = sortedKVs.slice(0, 7);
+        const otherRevenue = sortedKVs.slice(7).reduce((sum, [, revenue]) => sum + revenue, 0);
         processedData = [...topKVs, ['Khác', otherRevenue]];
     }
     
@@ -814,24 +814,27 @@ function createAreaRevenueChart(data) {
                         const colors = [
                             'rgba(102, 126, 234, 0.9)', 'rgba(76, 175, 80, 0.9)', 'rgba(255, 152, 0, 0.9)',
                             'rgba(244, 67, 54, 0.9)', 'rgba(33, 150, 243, 0.9)', 'rgba(156, 39, 176, 0.9)',
-                            'rgba(255, 193, 7, 0.9)', 'rgba(0, 150, 136, 0.9)', 'rgba(233, 30, 99, 0.9)',
-                            'rgba(103, 58, 183, 0.9)', 'rgba(255, 87, 34, 0.9)'
+                            'rgba(255, 193, 7, 0.9)', 'rgba(0, 150, 136, 0.9)', 'rgba(233, 30, 99, 0.9)'
                         ];
                         return colors[index % colors.length];
                     }),
                     borderColor: 'white',
-                    borderWidth: 3
+                    borderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: 1.5, // Tỷ lệ khung hình cho pie chart
                 plugins: {
                     legend: {
-                        position: 'right',
+                        position: window.innerWidth < 768 ? 'bottom' : 'right', // Legend dưới trên mobile
                         labels: {
-                            font: { size: 14 },
-                            padding: 20,
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12,
+                                weight: 'bold'
+                            },
+                            padding: window.innerWidth < 768 ? 10 : 15,
                             usePointStyle: true,
                             pointStyle: 'circle',
                             generateLabels: function(chart) {
@@ -840,15 +843,21 @@ function createAreaRevenueChart(data) {
                                     return data.labels.map((label, i) => {
                                         const value = data.datasets[0].data[i];
                                         const percentage = ((value / totalRevenue) * 100).toFixed(1);
+                                        // Rút gọn label trên mobile
+                                        let displayLabel = label;
+                                        if (window.innerWidth < 480 && label.length > 15) {
+                                            displayLabel = label.substring(0, 12) + '...';
+                                        } else if (window.innerWidth < 768 && label.length > 20) {
+                                            displayLabel = label.substring(0, 18) + '...';
+                                        }
                                         return {
-                                            text: `${label}: ${formatNumber(value)} (${percentage}%)`,
+                                            text: `${displayLabel}: ${formatNumber(value)} (${percentage}%)`,
                                             fillStyle: data.datasets[0].backgroundColor[i],
                                             strokeStyle: data.datasets[0].borderColor,
                                             lineWidth: data.datasets[0].borderWidth,
                                             hidden: !chart.getDataVisibility(i),
                                             index: i,
-                                            fontColor: '#333',
-                                            font: { size: 13, weight: 'bold' }
+                                            fontColor: '#333'
                                         };
                                     });
                                 }
@@ -858,9 +867,9 @@ function createAreaRevenueChart(data) {
                     },
                     tooltip: {
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleFont: { size: 14, weight: 'bold' },
-                        bodyFont: { size: 13 },
-                        padding: 12,
+                        titleFont: { size: 12 },
+                        bodyFont: { size: 11 },
+                        padding: 8,
                         callbacks: {
                             label: function(context) {
                                 const value = context.raw;
@@ -868,35 +877,40 @@ function createAreaRevenueChart(data) {
                                 return `${context.label}: ${formatNumber(value)} (${percentage}%)`;
                             }
                         }
-                    }
-                }
-            }
-        };
-        
-        if (hasDataLabelsPlugin) {
-            config.options.plugins.datalabels = {
-                display: true,
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                borderRadius: 6,
-                color: '#333',
-                font: { weight: 'bold', size: 13 },
-                padding: { top: 6, bottom: 6, left: 12, right: 12 },
-                borderColor: '#666',
-                borderWidth: 1.5,
-                formatter: function(value, context) {
+                    },
+                    datalabels: hasDataLabelsPlugin ? {
+                        display: function(context) {
+                            // Chỉ hiển thị datalabel nếu phần trăm > 5% và màn hình đủ lớn
+                            const value = context.dataset.data[context.dataIndex];
+                            const percentage = (value / totalRevenue) * 100;
+                            return percentage > 5 && window.innerWidth > 480;
+                        },
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderRadius: 4,
+                        color: '#333',
+                        font: {
+                            weight: 'bold',
+                            size: window.innerWidth < 768 ? 9 : 11
+                        },
+                        padding: {
+                            top: 2,
+                            bottom: 2,
+                            left: 4,
+                            right: 4
+                        },
+                        formatter: function(value, context) {
                     const percentage = ((value / totalRevenue) * 100).toFixed(1);
                     if (percentage < 3) return '';
                     const label = context.chart.data.labels[context.dataIndex];
                     const shortLabel = label.length > 20 ? label.substring(0, 18) + '...' : label;
                     return [`${shortLabel}`, `${formatNumber(value)}`, `(${percentage}%)`];
                 },
-                textAlign: 'center',
-                align: 'center',
-                offset: 20,
-                anchor: 'center',
-                clamp: true
-            };
-        }
+                        align: 'center',
+                        offset: window.innerWidth < 768 ? 5 : 10
+                    } : {}
+                }
+            }
+        };
         
         areaRevenueChart = new Chart(ctx, config);
     } catch (error) {
